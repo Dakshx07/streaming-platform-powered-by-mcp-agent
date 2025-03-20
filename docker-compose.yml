@@ -1,5 +1,12 @@
 version: '3.8'
 
+x-common-variables: &common-variables
+  NODE_ENV: development
+  DATABASE_URL: postgresql://postgres:postgres@postgres:5432/streamhub?schema=public
+  REDIS_URL: redis://redis:6379
+  JWT_SECRET: your_jwt_secret_key_here
+  CORS_ORIGIN: http://localhost:3000
+
 services:
   web:
     build:
@@ -17,15 +24,12 @@ services:
     volumes:
       - ./apps/web:/app/apps/web
       - web_node_modules:/app/apps/web/node_modules
+      - .next:/app/apps/web/.next
     depends_on:
       - api
     networks:
       - streamhub_network
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:3000"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+    restart: unless-stopped
 
   api:
     build:
@@ -34,12 +38,7 @@ services:
     ports:
       - "4000:4000"
     environment:
-      - NODE_ENV=development
-      - PORT=4000
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/streamhub?schema=public
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=your_jwt_secret_key_here
-      - CORS_ORIGIN=http://localhost:3000
+      <<: *common-variables
     volumes:
       - ./apps/api:/app/apps/api
       - api_node_modules:/app/apps/api/node_modules
@@ -50,11 +49,7 @@ services:
         condition: service_healthy
     networks:
       - streamhub_network
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "http://localhost:4000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+    restart: unless-stopped
 
   streaming:
     image: tiangolo/nginx-rtmp
@@ -68,6 +63,7 @@ services:
       - streamhub_network
     depends_on:
       - api
+    restart: unless-stopped
 
   postgres:
     image: postgres:15-alpine
@@ -86,6 +82,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -100,6 +97,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   # Development tools
   adminer:
@@ -110,6 +108,7 @@ services:
       - streamhub_network
     depends_on:
       - postgres
+    restart: unless-stopped
 
   redis-commander:
     image: rediscommander/redis-commander
@@ -121,6 +120,7 @@ services:
       - streamhub_network
     depends_on:
       - redis
+    restart: unless-stopped
 
 networks:
   streamhub_network:
@@ -132,3 +132,4 @@ volumes:
   streaming_temp:
   web_node_modules:
   api_node_modules:
+  .next:
