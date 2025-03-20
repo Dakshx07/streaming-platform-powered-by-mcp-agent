@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  password      String
+  displayName   String?
+  bio          String?
+  avatarUrl    String?
+  bannerUrl    String?
+  isVerified   Boolean   @default(false)
+  isModerator  Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  channel      Channel?
+  following    Follow[]    @relation("Follower")
+  followers    Follow[]    @relation("Following")
+  streams      Stream[]
+  chatMessages ChatMessage[]
+  subscriptions Subscription[] @relation("Subscriber")
+  subscribers   Subscription[] @relation("Creator")
+}
+
+model Channel {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  category    String?
+  tags        String[]
+  isLive      Boolean   @default(false)
+  viewerCount Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  streams     Stream[]
+  followers   Follow[]
+}
+
+model Stream {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  thumbnailUrl String?
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  viewerCount Int       @default(0)
+  duration    Int?      // in seconds
+  isRecorded  Boolean   @default(false)
+  recordingUrl String?
+
+  // Relations
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channelId   String
+  channel     Channel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  chatMessages ChatMessage[]
+}
+
+model ChatMessage {
+  id        String    @id @default(cuid())
+  content   String
+  createdAt DateTime  @default(now())
+
+  // Relations
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  streamId  String
+  stream    Stream    @relation(fields: [streamId], references: [id], onDelete: Cascade)
+}
+
+model Follow {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+
+  // Relations
+  followerId String
+  follower   User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  channelId  String
+  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, channelId])
+}
+
+model Subscription {
+  id          String    @id @default(cuid())
+  tier        Int       @default(1)
+  price       Float
+  startDate   DateTime  @default(now())
+  endDate     DateTime?
+  isActive    Boolean   @default(true)
+  autoRenew   Boolean   @default(true)
+
+  // Relations
+  subscriberId String
+  subscriber   User     @relation("Subscriber", fields: [subscriberId], references: [id], onDelete: Cascade)
+  creatorId    String
+  creator      User     @relation("Creator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriberId, creatorId])
+}
+
+// Enums
+enum StreamQuality {
+  P360
+  P480
+  P720
+  P1080
+}
