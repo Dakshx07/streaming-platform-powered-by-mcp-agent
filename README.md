@@ -16,7 +16,27 @@ git clone https://github.com/Dakshx07/streaming-platform-powered-by-mcp-agent.gi
 cd streaming-platform-powered-by-mcp-agent
 ```
 
-2. Install dependencies:
+2. Run the setup script:
+```bash
+# Make the script executable
+chmod +x scripts/setup-dev.sh
+
+# Run the setup
+./scripts/setup-dev.sh
+```
+
+The setup script will:
+- Install dependencies
+- Set up environment files
+- Generate Prisma client
+- Build packages
+- Start the development environment
+
+## Manual Setup
+
+If you prefer to set up manually:
+
+1. Install dependencies:
 ```bash
 # Install pnpm if you haven't already
 npm install -g pnpm
@@ -25,69 +45,41 @@ npm install -g pnpm
 pnpm install
 ```
 
-3. Set up environment variables:
+2. Set up environment variables:
 ```bash
-# Copy the example env file
+# Root
 cp .env.example .env
 
-# Edit the .env file with your values
+# Frontend
+cp apps/web/.env.example apps/web/.env
+
+# Backend
+cp apps/api/.env.example apps/api/.env
 ```
 
-4. Start the development environment:
+3. Generate Prisma client:
 ```bash
-# Using Docker (recommended)
-docker-compose up
-
-# Or start services individually
-pnpm dev
+cd apps/api
+npx prisma generate
+cd ../..
 ```
 
-5. Access the application:
+4. Build packages:
+```bash
+pnpm build
+```
+
+5. Start the development environment:
+```bash
+docker-compose up -d
+```
+
+## Accessing the Application
+
 - Frontend: http://localhost:3000
 - API: http://localhost:4000
-- Adminer (DB Admin): http://localhost:8081
+- Database Admin: http://localhost:8081
 - Redis Commander: http://localhost:8083
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Port Conflicts**
-   - Make sure ports 3000, 4000, 5432, 6379, 8080, 8081, and 8083 are available
-   - Stop any conflicting services or change the ports in docker-compose.yml
-
-2. **Database Connection Issues**
-   ```bash
-   # Reset the database
-   docker-compose down -v
-   docker-compose up
-   ```
-
-3. **Node Modules Issues**
-   ```bash
-   # Clean and reinstall
-   pnpm clean
-   pnpm install
-   ```
-
-4. **Docker Issues**
-   ```bash
-   # Full reset
-   docker-compose down -v
-   docker system prune -f
-   docker-compose up --build
-   ```
-
-### Checking Service Status
-
-```bash
-# Check running containers
-docker-compose ps
-
-# View logs
-docker-compose logs -f web  # Frontend logs
-docker-compose logs -f api  # Backend logs
-```
 
 ## Development
 
@@ -100,6 +92,7 @@ docker-compose logs -f api  # Backend logs
 │   ├── api/          # Node.js backend
 │   └── streaming/    # NGINX RTMP configuration
 ├── packages/         # Shared packages
+├── scripts/         # Development scripts
 ├── docker-compose.yml
 └── package.json
 ```
@@ -111,6 +104,65 @@ docker-compose logs -f api  # Backend logs
 - `pnpm lint`: Run linting
 - `pnpm format`: Format code
 - `pnpm clean`: Clean build artifacts
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Port Conflicts**
+   ```bash
+   # Check if ports are in use
+   lsof -i :3000
+   lsof -i :4000
+   
+   # Stop conflicting services or change ports in docker-compose.yml
+   ```
+
+2. **Database Connection Issues**
+   ```bash
+   # Reset the database
+   docker-compose down -v
+   docker-compose up
+   ```
+
+3. **Node Modules Issues**
+   ```bash
+   # Clean and reinstall
+   pnpm clean
+   rm -rf node_modules
+   pnpm install
+   ```
+
+4. **Docker Issues**
+   ```bash
+   # Full reset
+   docker-compose down -v
+   docker system prune -f
+   docker-compose up --build
+   ```
+
+### Viewing Logs
+
+```bash
+# View all logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f web    # Frontend
+docker-compose logs -f api    # Backend
+docker-compose logs -f nginx  # Streaming server
+```
+
+### Health Checks
+
+```bash
+# Check service health
+docker-compose ps
+
+# Check specific endpoints
+curl http://localhost:3000/health  # Frontend
+curl http://localhost:4000/health  # Backend
+```
 
 ## Contributing
 
