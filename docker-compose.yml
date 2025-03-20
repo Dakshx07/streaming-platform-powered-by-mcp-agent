@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
+      - NEXT_PUBLIC_SOCKET_URL=http://localhost:4000
+    volumes:
+      - ./apps/web:/app/apps/web
+      - /app/apps/web/node_modules
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=development
+      - PORT=4000
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/streamhub
+      - MONGODB_URI=mongodb://mongodb:27017/streamhub
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-jwt-secret
+      - AWS_ACCESS_KEY_ID=your-access-key
+      - AWS_SECRET_ACCESS_KEY=your-secret-key
+      - AWS_REGION=your-region
+      - STRIPE_SECRET_KEY=your-stripe-secret
+      - STRIPE_WEBHOOK_SECRET=your-webhook-secret
+    volumes:
+      - ./apps/api:/app/apps/api
+      - /app/apps/api/node_modules
+    depends_on:
+      - postgres
+      - mongodb
+      - redis
+
+  streaming:
+    build:
+      context: .
+      dockerfile: apps/streaming/Dockerfile
+    ports:
+      - "1935:1935"  # RTMP
+      - "8080:8080"  # HLS/DASH
+    volumes:
+      - ./apps/streaming/nginx.conf:/etc/nginx/nginx.conf
+      - streaming_temp:/tmp
+    depends_on:
+      - api
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=streamhub
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # Development tools
+  adminer:
+    image: adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - postgres
+
+  mongo-express:
+    image: mongo-express
+    ports:
+      - "8082:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+    depends_on:
+      - mongodb
+
+  redis-commander:
+    image: rediscommander/redis-commander
+    ports:
+      - "8083:8081"
+    environment:
+      - REDIS_HOSTS=redis
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  redis_data:
+  streaming_temp:
